@@ -164,3 +164,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web/
+
+
+this are y cicd script for github but it getting failed can u suggest what is wrong and give  me final script which are working

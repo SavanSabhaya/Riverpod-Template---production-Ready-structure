@@ -186,11 +186,16 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sessionProvider.overrideWith(
-            (ref) => const SessionState(
-              isInitialized: true,
-              isAuthenticated: true,
-              user: null,
-            ),
+            (ref) {
+              final authService = ref.watch(authServiceProvider);
+              final storageService = ref.watch(storageServiceProvider);
+              return SessionNotifier(authService, storageService)
+                ..state = const SessionState(
+                  isInitialized: true,
+                  isAuthenticated: true,
+                  user: null,
+                );
+            },
           ),
         ],
       );
@@ -212,11 +217,16 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sessionProvider.overrideWith(
-            (ref) => SessionState(
-              isInitialized: true,
-              isAuthenticated: true,
-              user: user,
-            ),
+            (ref) {
+              final authService = ref.watch(authServiceProvider);
+              final storageService = ref.watch(storageServiceProvider);
+              return SessionNotifier(authService, storageService)
+                ..state = SessionState(
+                  isInitialized: true,
+                  isAuthenticated: true,
+                  user: user,
+                );
+            },
           ),
         ],
       );
@@ -232,11 +242,16 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sessionProvider.overrideWith(
-            (ref) => const SessionState(
-              isInitialized: true,
-              isAuthenticated: false,
-              user: null,
-            ),
+            (ref) {
+              final authService = ref.watch(authServiceProvider);
+              final storageService = ref.watch(storageServiceProvider);
+              return SessionNotifier(authService, storageService)
+                ..state = const SessionState(
+                  isInitialized: true,
+                  isAuthenticated: false,
+                  user: null,
+                );
+            },
           ),
         ],
       );

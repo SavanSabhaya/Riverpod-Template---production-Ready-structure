@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:boilerplate_rivepod_flutter/main.dart' as app;
 import 'package:boilerplate_rivepod_flutter/shared/providers/session_provider.dart';
+import 'package:boilerplate_rivepod_flutter/shared/providers/auth_provider.dart';
+import 'package:boilerplate_rivepod_flutter/shared/services/storage_service.dart';
 import 'package:boilerplate_rivepod_flutter/shared/models/user.dart';
 
 void main() {
@@ -101,15 +103,21 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sessionProvider.overrideWith(
-            (ref) => SessionState(
-              isInitialized: true,
-              isAuthenticated: true,
-              user: const User(
-                id: '1',
-                email: 'test@example.com',
-                name: 'Test User',
-              ),
-            ),
+            (ref) {
+              // Create a mock SessionNotifier with the desired state
+              return SessionNotifier(
+                ref.watch(authServiceProvider),
+                ref.watch(storageServiceProvider),
+              )..state = const SessionState(
+                isInitialized: true,
+                isAuthenticated: true,
+                user: User(
+                  id: '1',
+                  email: 'test@example.com',
+                  name: 'Test User',
+                ),
+              );
+            },
           ),
         ],
       );

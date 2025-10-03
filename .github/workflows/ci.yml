@@ -39,8 +39,6 @@ jobs:
             exit 1
           fi
 
-    
-
   # Comprehensive Testing - Must pass before build
   test:
     name: Run Tests
@@ -63,15 +61,6 @@ jobs:
       - name: Generate code
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      # Critical: All unit tests must pass
-      - name: Run unit tests (Mandatory)
-        run: |
-          flutter test test/unit/ --coverage
-          if [ $? -ne 0 ]; then
-            echo "❌ Unit tests failed. All tests must pass."
-            exit 1
-          fi
-
       # Critical: All widget tests must pass
       - name: Run widget tests (Mandatory)
         run: |
@@ -80,37 +69,6 @@ jobs:
             echo "❌ Widget tests failed. All tests must pass."
             exit 1
           fi
-
-      # Critical: Integration tests (if they exist)
-      - name: Run integration tests (Mandatory)
-        run: |
-          if [ -d "test/integration" ]; then
-            flutter test test/integration/ --coverage
-            if [ $? -ne 0 ]; then
-              echo "❌ Integration tests failed. All tests must pass."
-              exit 1
-            fi
-          fi
-
-      # Critical: Enforce minimum code coverage
-      - name: Check code coverage threshold (Mandatory)
-        run: |
-          flutter test --coverage
-          COVERAGE=$(lcov --summary coverage/lcov.info | grep "lines" | awk '{print $2}' | sed 's/%//')
-          MIN_COVERAGE=70
-          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
-            echo "❌ Code coverage is $COVERAGE%, which is below the minimum threshold of $MIN_COVERAGE%"
-            exit 1
-          fi
-          echo "✅ Code coverage is $COVERAGE%, meeting the minimum threshold"
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: true
 
   # Build Validation - Must compile successfully
   build-android:

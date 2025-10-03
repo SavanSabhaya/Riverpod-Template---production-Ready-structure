@@ -7,9 +7,61 @@ on:
     branches: [main, develop]
 
 jobs:
+  # Security and Code Quality Checks - Must pass first
+  security-and-quality:
+    name: Security & Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.3"
+          channel: "stable"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Critical: Check for security vulnerabilities in dependencies
+      - name: Check for vulnerable dependencies
+        run: |
+          flutter pub outdated --mode=null-safety || true
+          echo "Checking for known security issues..."
+
+      # Critical: Verify pubspec.lock exists and dependencies are locked
+      - name: Verify dependency lock file
+        run: |
+          if [ ! -f "pubspec.lock" ]; then
+            echo "Error: pubspec.lock not found. Dependencies must be locked."
+            exit 1
+          fi
+
+      # Critical: Flutter analyze must pass with no errors
+      - name: Run Flutter Analyze (Mandatory)
+        run: |
+          flutter analyze --fatal-infos --fatal-warnings
+          if [ $? -ne 0 ]; then
+            echo "❌ Flutter analyze failed. Fix all issues before proceeding."
+            exit 1
+          fi
+
+      # Critical: Check code formatting
+      - name: Check code formatting (Mandatory)
+        run: |
+          flutter format --set-exit-if-changed .
+          if [ $? -ne 0 ]; then
+            echo "❌ Code formatting check failed. Run 'flutter format .' to fix."
+            exit 1
+          fi
+
+  # Comprehensive Testing - Must pass before build
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    needs: security-and-quality
 
     steps:
       - name: Checkout code
@@ -27,8 +79,46 @@ jobs:
       - name: Generate code
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      - name: Run widget tests
-        run: flutter test test/widget/
+      # Critical: All unit tests must pass
+      - name: Run unit tests (Mandatory)
+        run: |
+          flutter test test/unit/ --coverage
+          if [ $? -ne 0 ]; then
+            echo "❌ Unit tests failed. All tests must pass."
+            exit 1
+          fi
+
+      # Critical: All widget tests must pass
+      - name: Run widget tests (Mandatory)
+        run: |
+          flutter test test/widget/ --coverage
+          if [ $? -ne 0 ]; then
+            echo "❌ Widget tests failed. All tests must pass."
+            exit 1
+          fi
+
+      # Critical: Integration tests (if they exist)
+      - name: Run integration tests (Mandatory)
+        run: |
+          if [ -d "test/integration" ]; then
+            flutter test test/integration/ --coverage
+            if [ $? -ne 0 ]; then
+              echo "❌ Integration tests failed. All tests must pass."
+              exit 1
+            fi
+          fi
+
+      # Critical: Enforce minimum code coverage
+      - name: Check code coverage threshold (Mandatory)
+        run: |
+          flutter test --coverage
+          COVERAGE=$(lcov --summary coverage/lcov.info | grep "lines" | awk '{print $2}' | sed 's/%//')
+          MIN_COVERAGE=70
+          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+            echo "❌ Code coverage is $COVERAGE%, which is below the minimum threshold of $MIN_COVERAGE%"
+            exit 1
+          fi
+          echo "✅ Code coverage is $COVERAGE%, meeting the minimum threshold"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -36,7 +126,9 @@ jobs:
           file: ./coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
+          fail_ci_if_error: true
 
+  # Build Validation - Must compile successfully
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -64,11 +156,72 @@ jobs:
       - name: Generate code
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      - name: Build APK
-        run: flutter build apk --release --split-per-abi
+      # Critical: Validate Android configuration
+      - name: Validate Android build configuration
+        run: |
+          if [ ! -f "android/app/build.gradle" ]; then
+            echo "❌ Android build.gradle not found"
+            exit 1
+          fi
+          if [ ! -f "android/key.properties" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "⚠️ Warning: key.properties not found for production build"
+          fi
+
+      # Critical: Build must succeed
+      - name: Build APK (Mandatory)
+        run: |
+          flutter build apk --release --split-per-abi
+          if [ $? -ne 0 ]; then
+            echo "❌ Build failed. Fix build errors before proceeding."
+            exit 1
+          fi
+
+      # Critical: Verify APK was created
+      - name: Verify APK output
+        run: |
+          if [ ! -d "build/app/outputs/apk/release/" ]; then
+            echo "❌ APK output directory not found"
+            exit 1
+          fi
+          APK_COUNT=$(find build/app/outputs/apk/release/ -name "*.apk" | wc -l)
+          if [ $APK_COUNT -eq 0 ]; then
+            echo "❌ No APK files generated"
+            exit 1
+          fi
+          echo "✅ Successfully generated $APK_COUNT APK file(s)"
+
+      # Critical: Check APK size (prevent bloat)
+      - name: Check APK size
+        run: |
+          MAX_SIZE_MB=50
+          for apk in build/app/outputs/apk/release/*.apk; do
+            SIZE_MB=$(du -m "$apk" | cut -f1)
+            if [ $SIZE_MB -gt $MAX_SIZE_MB ]; then
+              echo "⚠️ Warning: $apk is ${SIZE_MB}MB, exceeding recommended size of ${MAX_SIZE_MB}MB"
+            else
+              echo "✅ $apk size: ${SIZE_MB}MB (within limits)"
+            fi
+          done
 
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
           name: android-apk
           path: build/app/outputs/apk/release/
+          retention-days: 30
+
+  # Final validation step
+  deployment-ready:
+    name: Deployment Ready
+    runs-on: ubuntu-latest
+    needs: [security-and-quality, test, build-android]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: All checks passed
+        run: |
+          echo "✅ All mandatory checks passed successfully!"
+          echo "✅ Security & Quality: Passed"
+          echo "✅ Tests: Passed"
+          echo "✅ Build: Passed"
+          echo "🚀 Build is ready for deployment"

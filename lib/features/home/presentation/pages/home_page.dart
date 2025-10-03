@@ -4,7 +4,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/providers/auth_provider.dart';
-import '../../../../shared/models/auth_state.dart';
 import '../../../../core/router/app_router.dart';
 
 class HomePage extends ConsumerStatefulWidget {

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/providers/session_provider.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/router/app_router.dart';

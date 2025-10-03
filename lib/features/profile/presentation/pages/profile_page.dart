@@ -5,8 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/providers/auth_provider.dart';
-import '../../../../shared/models/auth_state.dart';
-import '../../../../shared/models/user.dart';
 import '../../../../core/utils/helpers.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {

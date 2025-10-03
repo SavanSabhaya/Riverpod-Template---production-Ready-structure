@@ -94,13 +94,11 @@ jobs:
       # Critical: Validate Android configuration
       - name: Validate Android build configuration
         run: |
-          if [ ! -f "android/app/build.gradle" ]; then
+          if [ ! -f "android/app/build.gradle.kts" ]; then
             echo "❌ Android build.gradle not found"
             exit 1
           fi
-          if [ ! -f "android/key.properties" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "⚠️ Warning: key.properties not found for production build"
-          fi
+         
 
       # Critical: Build must succeed
       - name: Build APK (Mandatory)
